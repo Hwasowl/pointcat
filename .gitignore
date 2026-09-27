@@ -25,6 +25,10 @@ dist-ssr
 
 *.ait
 
+# 광고 그룹 ID·프로모션 코드 — 저장소에 올리지 않는다
+.env
+.env.production
+
 # Apps in Toss design-guide failure trace
 .ait-design-guide-failed
 
