@@ -1,0 +1,776 @@
+/* base.css의 본문 스택은 Tossface가 맨 앞이라 숫자 0-9까지 키캡 이모지 글리프로 렌더된다.
+   이 화면에는 이모지가 없으므로 시스템 서체만 쓴다(이모지를 넣게 되면 .tf로 감싼다). */
+.app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  font-family: -apple-system, system-ui, 'Malgun Gothic', sans-serif;
+}
+
+/* 풍경 */
+.stage {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+.scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* 배를 끄는 동안 화면이 스크롤·확대되지 않게 */
+  touch-action: none;
+}
+/* 밝은 하늘 테마에서 흰 네비게이션 아이콘·HUD 글자가 묻히지 않게 위쪽만 어둡게 */
+.scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(var(--safe-top) + var(--nav-h) + 96px);
+  background: linear-gradient(rgba(12, 16, 44, 0.38), rgba(12, 16, 44, 0));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+.light-sky .scrim {
+  opacity: 1;
+}
+
+/* HUD */
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 0.6s;
+}
+.hud > * {
+  pointer-events: auto;
+}
+.hud :focus-visible {
+  outline-color: #ffffff;
+}
+.balance {
+  position: absolute;
+  left: var(--space-4);
+  top: calc(var(--safe-top) + var(--nav-h) + var(--space-2));
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+/* 두 줄의 게이지 막대가 세로로 나란하게 */
+.gauges {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+.gauge > span:first-of-type {
+  min-width: 44px;
+}
+.gauge,
+.tool {
+  background: rgba(12, 16, 44, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--color-text-inverse);
+}
+/* 유리병·구슬 — 0원 표시를 빼고 이 둘을 HUD의 주인공으로 */
+.gauge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-3) 6px 10px;
+  border-radius: 16px;
+  font-size: var(--font-size-body-small);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.gauge-ic {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+.gauge .bar {
+  width: 52px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+/* 부스터 게이지: 충전 중에는 차오르고, 켜진 동안은 파랗게 줄어든다 */
+@keyframes fill-up {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+@keyframes fill-down {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0;
+  }
+}
+@keyframes twinkle-wind {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(156, 208, 255, 0);
+  }
+  50% {
+    box-shadow: 0 0 16px 3px rgba(156, 208, 255, 0.8);
+  }
+}
+.gauge.wind .bar i.charge {
+  background: #9cd0ff;
+  animation: fill-up linear forwards;
+}
+.gauge.wind .bar i.drain {
+  background: #9cd0ff;
+  animation: fill-down linear forwards;
+}
+.gauge.wind.on {
+  border-color: rgba(156, 208, 255, 0.9);
+  background: rgba(90, 176, 255, 0.35);
+  animation: twinkle-wind 1s ease-in-out infinite;
+}
+.gauge .bar i {
+  display: block;
+  height: 100%;
+  background: #fff3c4;
+  border-radius: 2px;
+  transition: width 0.4s;
+}
+.tools {
+  position: absolute;
+  right: var(--space-4);
+  top: calc(var(--safe-top) + var(--nav-h) + var(--space-2));
+  display: flex;
+  gap: var(--space-2);
+}
+.tool {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+}
+.tool[aria-pressed='true'] {
+  background: rgba(255, 255, 255, 0.3);
+}
+.toast {
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  /* 시트(.sheet 높이 42%) 바로 위에 붙인다 */
+  bottom: calc(42% + var(--space-3));
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 14px var(--space-4);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #191f28;
+  box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+/* 유리병이 가득 차면 게이지·알림·교환 카드가 반짝인다 */
+@keyframes twinkle {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 214, 107, 0);
+  }
+  50% {
+    box-shadow: 0 0 16px 3px rgba(255, 214, 107, 0.75);
+  }
+}
+@keyframes twinkle-blue {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(49, 130, 246, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.35);
+  }
+}
+.gauge.full {
+  border-color: rgba(255, 214, 107, 0.9);
+  animation: twinkle 1.4s ease-in-out infinite;
+}
+.toast.sparkle {
+  animation: twinkle 1.4s ease-in-out infinite;
+}
+.card.exch.ready {
+  animation: twinkle-blue 1.4s ease-in-out infinite;
+}
+.toast .bang {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #ffc342;
+  color: #4a3200;
+  font-size: var(--font-size-body-small);
+  font-weight: 700;
+}
+.toast b {
+  display: block;
+  font-size: var(--font-size-body);
+  font-weight: 700;
+  line-height: 1.35;
+}
+.toast small {
+  display: block;
+  font-size: var(--font-size-body-small);
+  color: #4e5968;
+  line-height: 1.4;
+}
+
+/* 시트 */
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 42%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--color-bg-canvas);
+  border-radius: 22px 22px 0 0;
+  padding-bottom: calc(max(var(--safe-bottom), 18px) + var(--space-4));
+  scrollbar-width: none;
+}
+.sheet::-webkit-scrollbar {
+  display: none;
+}
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) 0;
+}
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-radius: 20px;
+  background: var(--color-card);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.card:active {
+  transform: scale(0.98);
+}
+.card strong {
+  font-size: var(--font-size-body);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--color-text-strong);
+}
+.card .desc {
+  font-size: var(--font-size-body-small);
+  line-height: 1.4;
+  color: var(--color-text-subtle);
+}
+.ad {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--color-ad-tag);
+  color: #ffffff;
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  line-height: 1.5;
+}
+/* 토스 포인트 교환: 유리병 → 빛 → 포인트 흐름 + 받기 버튼 */
+.card.exch {
+  align-items: stretch;
+  cursor: default;
+}
+.card.exch:active {
+  transform: none;
+}
+.card.exch > strong {
+  padding-right: 64px;
+  word-break: keep-all;
+}
+.jar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 var(--space-2);
+}
+.jar-row svg {
+  flex: none;
+  width: 32px;
+  height: 32px;
+}
+.jar-bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--color-line);
+  overflow: hidden;
+}
+.jar-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: #ffc342;
+  transition: width 0.4s;
+}
+.jar-row b {
+  min-width: 44px;
+  text-align: right;
+  font-size: var(--font-size-body);
+  font-weight: 700;
+  color: var(--color-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+.card.exch .desc {
+  margin: 0;
+  text-align: center;
+  word-break: keep-all;
+}
+.exch-btn {
+  min-height: 52px;
+  margin-top: var(--space-3);
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-toss-point);
+  color: var(--color-text-inverse);
+  font: inherit;
+  font-size: var(--font-size-body);
+  font-weight: 700;
+  cursor: pointer;
+}
+.exch-btn[aria-disabled='true'] {
+  background: var(--color-line);
+  color: var(--color-text-hint);
+  cursor: default;
+}
+
+.today {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  padding: 14px var(--space-1);
+  border-radius: 20px;
+  background: var(--color-card);
+}
+.today div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+.today div + div {
+  border-left: 1px solid var(--color-line);
+}
+.today small {
+  font-size: var(--font-size-caption);
+  color: var(--color-text-subtle);
+}
+.today b {
+  font-size: var(--font-size-body);
+  font-weight: 700;
+  color: var(--color-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 꾸미기(배경·고양이) */
+/* 시트 손잡이(sticky, z-index 1) 위로 띄운다 */
+.theme-backdrop {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+}
+/* 스피커 아래로 열리는 배경음·효과음 스위치 */
+.sound-panel {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--safe-top) + var(--nav-h) + var(--space-2) + 44px + var(--space-2));
+  right: var(--space-4);
+  width: min(260px, calc(100% - var(--space-6)));
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) var(--space-4);
+  border-radius: 20px;
+  background: var(--color-card);
+  box-shadow: 0 12px 32px -12px rgba(12, 16, 44, 0.45);
+}
+.sound-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  word-break: keep-all;
+  cursor: pointer;
+}
+.sound-row + .sound-row {
+  border-top: 1px solid var(--color-line);
+}
+.sound-row b {
+  display: block;
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  color: var(--color-text-strong);
+}
+.sound-row small {
+  display: block;
+  font-size: var(--font-size-caption);
+  color: var(--color-text-subtle);
+}
+.switch {
+  flex: none;
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--color-line);
+  transition: background 0.2s;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(12, 16, 44, 0.3);
+  transition: transform 0.2s;
+}
+.sound-row[aria-checked='true'] .switch {
+  background: var(--brand-primary);
+}
+.sound-row[aria-checked='true'] .switch::after {
+  transform: translateX(18px);
+}
+.theme-panel {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--safe-top) + var(--nav-h) + var(--space-2) + 44px + var(--space-2));
+  right: var(--space-4);
+  width: min(360px, calc(100% - var(--space-6)));
+  /* 스킨이 늘어 작은 화면에서는 패널 안에서 스크롤한다 */
+  max-height: calc(100% - var(--safe-top) - var(--nav-h) - 44px - var(--space-2) * 2 - max(var(--safe-bottom), var(--space-4)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: 20px;
+  background: var(--color-card);
+  box-shadow: 0 12px 32px -12px rgba(12, 16, 44, 0.45);
+}
+.theme-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.theme-head h2 {
+  margin: 0;
+  font-size: var(--font-size-subtitle);
+  font-weight: var(--font-weight-subtitle);
+  color: var(--color-text-strong);
+}
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--color-text-subtle);
+  cursor: pointer;
+}
+.theme-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+.theme-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-1);
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: var(--color-card);
+  cursor: pointer;
+}
+.theme-chip[aria-pressed='true'] {
+  border-color: var(--brand-primary);
+  box-shadow: inset 0 0 0 1px var(--brand-primary);
+}
+.theme-chip i {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-bottom: var(--space-1);
+  border-radius: 50%;
+  color: var(--color-text-inverse);
+}
+.theme-chip.locked i {
+  box-shadow: inset 0 0 0 16px var(--dim);
+}
+.skin-label {
+  margin: 0;
+  font-size: var(--font-size-body-small);
+  font-weight: 600;
+  color: var(--color-text-subtle);
+}
+/* 잠긴 스킨을 여는 방법 안내 */
+.skin-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: 12px;
+  background: var(--color-bg-canvas);
+  font-size: var(--font-size-body-small);
+  line-height: 1.45;
+  color: var(--color-text-subtle);
+  word-break: keep-all;
+}
+.skin-note svg {
+  flex: none;
+  margin-top: 3px;
+}
+/* 고양이 얼굴 위에 자물쇠를 겹친다 */
+.cat-chip i {
+  background: #e4e9f4;
+}
+.cat-chip i > * {
+  grid-area: 1 / 1;
+}
+.cat-chip.locked i .cat-face {
+  opacity: 0.45;
+}
+.theme-chip b {
+  font-size: var(--font-size-body-small);
+  font-weight: 600;
+  color: var(--color-text-strong);
+}
+.theme-chip small {
+  font-size: var(--font-size-caption);
+  color: var(--color-text-subtle);
+}
+.banner-slot {
+  width: 100%;
+  min-height: 96px;
+}
+
+/* 방치 보상 */
+.away-hint {
+  margin: 0;
+  text-align: center;
+  font-size: var(--font-size-body-small);
+  color: var(--color-text-subtle);
+}
+.away-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: var(--dim);
+}
+.away {
+  position: absolute;
+  z-index: 7;
+  left: var(--space-4);
+  right: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 360px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  border-radius: 24px;
+  background: var(--color-card);
+  text-align: center;
+  box-shadow: 0 12px 32px -12px rgba(12, 16, 44, 0.45);
+}
+/* 첫 진입 고양이 고르기 */
+.starter-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-2);
+}
+.starter-chip i {
+  width: 64px;
+  height: 64px;
+}
+.away-ic {
+  width: 56px;
+  height: 56px;
+}
+.away h2 {
+  margin: 0;
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-title);
+  color: var(--color-text-strong);
+}
+.away p {
+  margin: 0;
+  font-size: var(--font-size-body-small);
+  color: var(--color-text-subtle);
+}
+.away-ok {
+  width: 100%;
+  min-height: 52px;
+  margin-top: var(--space-3);
+  border: 0;
+  border-radius: 14px;
+  background: var(--brand-primary);
+  color: var(--color-text-inverse);
+  font: inherit;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-subtitle);
+}
+
+/* 첫 진입 가이드 투어 — 비출 곳만 뚫고 나머지는 어둡게 */
+.tour {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+}
+.tour.no-hole {
+  background: var(--dim);
+}
+.tour-hole {
+  position: absolute;
+  border-radius: 20px;
+  box-shadow: 0 0 0 200vmax var(--dim);
+  transition: left 0.3s, top 0.3s, width 0.3s, height 0.3s;
+}
+.tour-tip {
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  max-width: 360px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-radius: 20px;
+  background: var(--color-card);
+  box-shadow: 0 12px 32px -12px rgba(12, 16, 44, 0.45);
+  word-break: keep-all;
+}
+.tour-count {
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  color: var(--brand-primary);
+}
+.tour-tip h2 {
+  margin: 0;
+  font-size: var(--font-size-body);
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+.tour-tip p {
+  margin: 0;
+  font-size: var(--font-size-body-small);
+  line-height: 1.45;
+  color: var(--color-text-subtle);
+}
+.tour-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.tour-skip,
+.tour-next {
+  min-width: 72px;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-size: var(--font-size-body-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+.tour-skip {
+  background: none;
+  color: var(--color-text-subtle);
+}
+.tour-next {
+  background: var(--brand-primary);
+  color: var(--color-text-inverse);
+}
+
+/* 알림 */
+.snack {
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(var(--safe-bottom), 18px) + var(--space-4));
+  max-width: calc(100% - var(--space-6));
+  padding: 10px var(--space-4);
+  border-radius: 14px;
+  background: rgba(25, 31, 40, 0.94);
+  color: #ffffff;
+  font-size: var(--font-size-body-small);
+  text-align: center;
+  transform: translate(-50%, 12px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 5;
+}
+.snack.on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud,
+  .scrim,
+  .tour-hole {
+    transition-duration: 0.01s;
+  }
+  .gauge.full,
+  .gauge.wind.on,
+  .toast.sparkle,
+  .card.exch.ready {
+    animation: none;
+  }
+}
