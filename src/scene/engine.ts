@@ -27,8 +27,8 @@ type Ring = { x: number; y: number; age: number };
 /** 물 위에 떠내려오는 구슬·돌. d는 물길 안의 깊이(0 = 수평선 쪽, 1 = 시트 쪽), r은 강둑 사이에서의 자리(0~1) — 물길이 휘면 d가 따라 바뀐다 */
 type Item = { k: 'orb' | 'rock'; x: number; d: number; r: number; ph: number; hit: boolean; dead: boolean };
 type Pop = { x: number; y: number; text: string; age: number };
-/** 배 꽁무니에서 뒤로 흘러가는 물보라 */
-type Foam = { x: number; y: number; vy: number; age: number };
+/** 배 꽁무니에서 뒤로 흘러가는 물보라. big은 부스터 중에 인 굵고 하얀 물보라 */
+type Foam = { x: number; y: number; vy: number; age: number; big: boolean };
 /** 부스터가 켜진 동안 물 위를 스쳐 가는 바람 줄기. x는 줄기의 앞끝 */
 type Gust = { x: number; y: number; len: number; sp: number; ph: number };
 
@@ -107,6 +107,8 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scen
   let mung = false;
   let mungT = 0;
   let boostUntil = 0;
+  /** 부스터가 켜진 시각 — 켜질 때 화면이 한 번 크게 흔들린다 */
+  let boostFrom = 0;
   let P: Particle[] = [];
   let FX: Spark[] = [];
   let RINGS: Ring[] = [];
@@ -527,12 +529,12 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scen
     FX = FX.filter((f) => f.life > 0);
     // 물보라: 꽁무니에서 위아래로 벌어지며 뒤로 흘러간다
     wakeAcc += dt;
-    // 대시 중에는 물보라가 촘촘하게 인다
-    const wakeEvery = dashT > 0 ? 0.012 : 0.04;
+    // 대시·부스터 중에는 물보라가 촘촘하게 인다. 부스터 물보라는 더 넓게 벌어진다
+    const wakeEvery = dashT > 0 || boost ? 0.012 : 0.04;
     while (wakeAcc > wakeEvery) {
       wakeAcc -= wakeEvery;
       const side = WAKE.length % 2 ? 1 : -1;
-      WAKE.push({ x: bx - 38 * sc, y: by + 3, vy: side * rnd(4, 11) * sc, age: 0 });
+      WAKE.push({ x: bx - 38 * sc, y: by + 3, vy: side * rnd(4, 11) * (boost ? 2.2 : 1) * sc, age: 0, big: boost });
     }
     for (const f of WAKE) {
       f.x -= drift * (0.75 + bk * 0.5) * dt;
@@ -901,9 +903,9 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scen
     for (const it of ITEMS) if (laneY(it.d) <= by) drawItem(it);
     for (const f of WAKE) {
       const k = f.age / 1.6;
-      ctx.fillStyle = `rgba(${th.ripple},${0.7 * (1 - k) * (1 - k)})`;
+      ctx.fillStyle = f.big ? `rgba(255,255,255,${0.85 * (1 - k) * (1 - k)})` : `rgba(${th.ripple},${0.7 * (1 - k) * (1 - k)})`;
       ctx.beginPath();
-      ctx.ellipse(f.x, f.y, 3 + k * 9, 1 + k * 0.8, 0, 0, TAU);
+      ctx.ellipse(f.x, f.y, (3 + k * 9) * (f.big ? 1.6 : 1), (1 + k * 0.8) * (f.big ? 1.5 : 1), 0, 0, TAU);
       ctx.fill();
     }
     // 배 반영, 배
@@ -1004,12 +1006,45 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scen
     ctx.shadowBlur = 0;
   }
 
+  /** 부스터 중 화면 가장자리의 파란 빛. 켜지고 꺼질 때는 서서히 밝아지고 흐려진다 */
+  function drawBoostEdge(now: number) {
+    const env = Math.min(1, (now - boostFrom) / 300, (boostUntil - now) / 400);
+    const a = env * (reduce ? 0.35 : 0.3 + 0.15 * Math.sin(t * 8));
+    const e = 36;
+    // 아래쪽은 시트에 가려지므로 시트 윗변을 테두리로 삼는다
+    const B = Math.min(H, opts.waterBottom());
+    const edges: [number, number, number, number, number, number, number, number][] = [
+      [0, 0, 0, e, 0, 0, W, e],
+      [0, B, 0, B - e, 0, B - e, W, e],
+      [0, 0, e, 0, 0, 0, e, B],
+      [W, 0, W - e, 0, W - e, 0, e, B],
+    ];
+    for (const [x0, y0, x1, y1, rx, ry, rw, rh] of edges) {
+      const g = ctx.createLinearGradient(x0, y0, x1, y1);
+      g.addColorStop(0, `rgba(90,176,255,${a})`);
+      g.addColorStop(1, 'rgba(90,176,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(rx, ry, rw, rh);
+    }
+  }
+
   function frame(now: number) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     t += dt;
     update(dt);
+    const boostFx = now < boostUntil && !mung;
+    // 부스터: 켜지는 순간 크게, 이후로는 잔잔하게 화면이 흔들린다. 흔들려도 가장자리가 비지 않게 살짝 확대한다
+    const shake = boostFx && !reduce ? 1 + 3 * Math.max(0, 1 - (now - boostFrom) / 600) : 0;
+    if (shake) {
+      ctx.save();
+      ctx.translate(W / 2 + rnd(-shake, shake), H / 2 + rnd(-shake, shake));
+      ctx.scale(1 + 10 / W, 1 + 10 / W);
+      ctx.translate(-W / 2, -H / 2);
+    }
     draw();
+    if (shake) ctx.restore();
+    if (boostFx) drawBoostEdge(now);
     raf = requestAnimationFrame(frame);
   }
 
@@ -1032,6 +1067,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scen
     },
     setBoostUntil(v) {
       boostUntil = v;
+      boostFrom = performance.now();
     },
     setFill(n) {
       // 구슬을 부어 병이 찼을 때도 병이 반짝이게

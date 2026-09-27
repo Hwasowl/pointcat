@@ -28,8 +28,8 @@ export const MARBLE_SPEED = 2;
 /** 돌 간격(초). 부딪히면 배가 튕겨난다 */
 export const ROCK_EVERY_S = 6;
 
-/** 부스터: 30초 동안 게이지가 차오르면 저절로 5초 동안 켜진다(광고 없음) */
-export const BOOST_EVERY_MS = 30_000;
+/** 부스터: 20초 동안 게이지가 차오르면 저절로 5초 동안 켜진다(광고 없음) */
+export const BOOST_EVERY_MS = 20_000;
 export const BOOST_MS = 5_000;
 
 /** 방치 보상: 앱을 나가 있던 동안 한 시간에 이만큼 유리병이 찬다(나간 시간에 비례) — 4칸 = 10% */

@@ -1,4 +1,4 @@
-import { SafeArea } from '@apps-in-toss/web-framework';
+import { Device, SafeArea } from '@apps-in-toss/web-framework';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
 import { BannerAd } from './components/BannerAd';
@@ -145,6 +145,8 @@ export default function App() {
       waterBottom: () => sheetRef.current?.getBoundingClientRect().top ?? window.innerHeight,
       onMarble: () => {
         sound.chime();
+        // 구슬을 건질 때마다 짧게 톡 — 토스 앱 밖(브라우저)에서는 실패해도 무시한다
+        Device.triggerHaptic({ type: 'tickWeak' }).catch(() => {});
         // 구슬이 다 모이면 유리병에 붓고 0부터 다시 모은다
         setSave((x) => {
           if (!x) return x;
@@ -204,7 +206,7 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', onVis);
   }, []);
 
-  // 부스터: 30초 동안 게이지가 차오르면 저절로 5초 동안 켜진다(광고 없음)
+  // 부스터: 20초 동안 게이지가 차오르면 저절로 5초 동안 켜진다(광고 없음)
   useEffect(() => {
     if (!ready) return;
     let id = 0;
@@ -480,7 +482,7 @@ export default function App() {
                   {s.marbles}/{MARBLES_PER_POUR}
                 </span>
               </div>
-              {/* 부스터: 30초 동안 막대가 차오르고, 켜진 5초 동안은 파랗게 빛나며 줄어든다 */}
+              {/* 부스터: 20초 동안 막대가 차오르고, 켜진 5초 동안은 파랗게 빛나며 줄어든다 */}
               <div className={`gauge wind${wind.on ? ' on' : ''}`}>
                 <svg className="gauge-ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
                   <path d="M2 7h10a2.5 2.5 0 1 0-2.5-2.5" />
