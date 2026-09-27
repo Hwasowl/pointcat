@@ -126,17 +126,52 @@
     box-shadow: 0 0 16px 3px rgba(156, 208, 255, 0.8);
   }
 }
-.gauge.wind .bar i.charge {
+/* 시트(.sheet 높이 42%) 바로 위 전폭 선. 배를 끄는 손을 막지 않게 터치는 통과시킨다 */
+.hud > .boost-line {
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: calc(42% + var(--space-3));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: none;
+  color: var(--color-text-inverse);
+}
+.boost-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-body-small);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 4px rgba(12, 16, 44, 0.6);
+}
+.boost-label svg {
+  width: 16px;
+  height: 16px;
+}
+.boost-line .track {
+  align-self: stretch;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+}
+.boost-line .track i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
   background: #9cd0ff;
+}
+.boost-line .track i.charge {
   animation: fill-up linear forwards;
 }
-.gauge.wind .bar i.drain {
-  background: #9cd0ff;
+.boost-line .track i.drain {
   animation: fill-down linear forwards;
 }
-.gauge.wind.on {
-  border-color: rgba(156, 208, 255, 0.9);
-  background: rgba(90, 176, 255, 0.35);
+.boost-line.on .track {
   animation: twinkle-wind 1s ease-in-out infinite;
 }
 .gauge .bar i {
@@ -768,7 +803,7 @@
     transition-duration: 0.01s;
   }
   .gauge.full,
-  .gauge.wind.on,
+  .boost-line.on .track,
   .toast.sparkle,
   .card.exch.ready {
     animation: none;

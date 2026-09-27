@@ -143,6 +143,8 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scen
   let stun = 0;
   let happy = 0;
   let startled = 0;
+  /** 부스터가 켜지면 1 → 0(1.1초). 고양이가 점프하고 따봉을 든다 */
+  let cheer = 0;
   /** fvx·fvy는 손가락의 최근 속도(px/s) — 뗄 때 튕겼는지 본다 */
   let drag: { id: number; x: number; y: number; bx: number; bk: number; moved: boolean; lx: number; ly: number; lt: number; fvx: number; fvy: number } | null = null;
   let jx = 0;
@@ -460,6 +462,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scen
     stun = Math.max(0, stun - dt);
     happy = Math.max(0, happy - dt);
     startled = Math.max(0, startled - dt);
+    cheer = Math.max(0, cheer - dt / 1.1);
     const sc = scaleAt(bk);
     by = laneY(bk) + (reduce ? 0 : Math.sin(t * 1.1) * 1.6);
     jx = bx + 15 * sc;
@@ -592,7 +595,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scen
     ctx.globalCompositeOperation = 'lighter';
     glowDot(15, -16, 16 + f * 46 + jarPulse * 12, theme.glowRGB, 0.16 + 0.34 * f + jarPulse * 0.2);
     ctx.globalCompositeOperation = 'source-over';
-    drawCat(ctx, cat, { t, look: clamp(vx / 90, -1, 1), happy: happy / 0.8, startled, still: reduce, rim: `rgba(${theme.orb.rgb},.6)`, rimSide: theme.orb.x * W > bx ? 1 : -1 });
+    drawCat(ctx, cat, { t, look: clamp(vx / 90, -1, 1), happy: happy / 0.8, startled, cheer, still: reduce, rim: `rgba(${theme.orb.rgb},.6)`, rimSide: theme.orb.x * W > bx ? 1 : -1 });
     // 유리병
     ctx.fillStyle = 'rgba(255,255,255,.14)';
     ctx.beginPath();
@@ -1068,6 +1071,9 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scen
     setBoostUntil(v) {
       boostUntil = v;
       boostFrom = performance.now();
+      cheer = 1;
+      const sc = scaleAt(bk);
+      POPS.push({ x: bx - 10 * sc, y: by - 48 * sc, text: '야옹!', age: 0 });
     },
     setFill(n) {
       // 구슬을 부어 병이 찼을 때도 병이 반짝이게

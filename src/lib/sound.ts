@@ -304,4 +304,28 @@ export const sound = {
     src.connect(bp).connect(g).connect(fx);
     src.stop(t + 1.5);
   },
+  /** 부스터가 켜질 때 고양이가 '먀-옹' — 음높이를 올렸다 내리고, 입 모양(대역)을 열었다 닫는다 */
+  meow() {
+    if (!fxOn || !ac || !fx || holds.size > 0) return;
+    const t = ac.currentTime + 0.12;
+    const o = ac.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(560, t);
+    o.frequency.exponentialRampToValueAtTime(860, t + 0.14);
+    o.frequency.exponentialRampToValueAtTime(470, t + 0.5);
+    const bp = ac.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 2.2;
+    bp.frequency.setValueAtTime(900, t);
+    bp.frequency.exponentialRampToValueAtTime(2000, t + 0.16);
+    bp.frequency.exponentialRampToValueAtTime(750, t + 0.5);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.12, t + 0.05);
+    g.gain.setValueAtTime(0.12, t + 0.3);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    o.connect(bp).connect(g).connect(fx);
+    o.start(t);
+    o.stop(t + 0.6);
+  },
 };

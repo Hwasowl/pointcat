@@ -216,6 +216,8 @@ export default function App() {
       if (on) {
         scene.current?.setBoostUntil(performance.now() + ms);
         sound.whoosh();
+        sound.meow();
+        Device.triggerHaptic({ type: 'success' }).catch(() => {});
       }
       id = window.setTimeout(() => phase(!on), ms);
     };
@@ -482,19 +484,6 @@ export default function App() {
                   {s.marbles}/{MARBLES_PER_POUR}
                 </span>
               </div>
-              {/* 부스터: 20초 동안 막대가 차오르고, 켜진 5초 동안은 파랗게 빛나며 줄어든다 */}
-              <div className={`gauge wind${wind.on ? ' on' : ''}`}>
-                <svg className="gauge-ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                  <path d="M2 7h10a2.5 2.5 0 1 0-2.5-2.5" />
-                  <path d="M2 11h13a2.5 2.5 0 1 1-2.5 2.5" />
-                  <path d="M2 15h5" />
-                </svg>
-                <span>부스터</span>
-                <span className="bar" aria-hidden="true">
-                  <i key={wind.until} className={wind.on ? 'drain' : 'charge'} style={{ animationDuration: `${wind.on ? BOOST_MS : BOOST_EVERY_MS}ms` }} />
-                </span>
-                <span>{wind.on ? '작동 중' : `${Math.max(0, Math.ceil((wind.until - now) / 1000))}초`}</span>
-              </div>
             </div>
           </div>
           <div className="tools" data-tour="tools">
@@ -553,6 +542,22 @@ export default function App() {
               </svg>
             </button>
           </div>
+          {/* 부스터: 시트 바로 위 얇은 선. 20초 동안 차오르고, 켜진 5초 동안은 파랗게 빛나며 줄어든다. 병이 가득 차면 같은 자리에 토스트가 뜨므로 숨긴다 */}
+          {!full && (
+            <div className={`boost-line${wind.on ? ' on' : ''}`}>
+              <span className="boost-label">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                  <path d="M2 7h10a2.5 2.5 0 1 0-2.5-2.5" />
+                  <path d="M2 11h13a2.5 2.5 0 1 1-2.5 2.5" />
+                  <path d="M2 15h5" />
+                </svg>
+                부스터 {wind.on ? '작동 중' : `${Math.max(0, Math.ceil((wind.until - now) / 1000))}초`}
+              </span>
+              <span className="track" aria-hidden="true">
+                <i key={wind.until} className={wind.on ? 'drain' : 'charge'} style={{ animationDuration: `${wind.on ? BOOST_MS : BOOST_EVERY_MS}ms` }} />
+              </span>
+            </div>
+          )}
           {full && !touring && (
             <div className="toast sparkle">
               <span className="bang" aria-hidden="true">

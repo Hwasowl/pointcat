@@ -10,6 +10,8 @@ export type CatPose = {
   happy: number;
   /** 바위에 부딪힌 직후 1 → 0 */
   startled: number;
+  /** 부스터가 켜진 직후 1 → 0. 움츠렸다 점프하고, 야옹 하며 따봉을 든다 */
+  cheer: number;
   /** 움직임 줄이기 */
   still: boolean;
   /** 달·해 쪽 가장자리에 비치는 빛. 외곽선 대신 실루엣을 배경에서 떼어 준다 */
@@ -24,21 +26,40 @@ export type CatPose = {
  * 배경처럼 외곽선 없이 면으로만 그린다.
  */
 export function drawCat(ctx: CanvasRenderingContext2D, skin: CatSkin, p: CatPose) {
-  const { t, happy, startled } = p;
+  const { t, startled } = p;
+  const happy = Math.max(p.happy, p.cheer);
   const look = p.look * 1.6;
   const hop = happy > 0 ? Math.sin(happy * Math.PI) * 3 : 0;
   const shake = startled > 0.5 ? Math.sin(t * 60) * 1 : 0;
   const wag = p.still ? 0 : Math.sin(t * (happy > 0 ? 10 : 2)) * (happy > 0 ? 3.5 : 2);
+  // 부스터 환호: 0~0.12 움츠림 → 0.12~0.5 점프(늘어남) → 0.5~0.62 착지(찌그러짐) → 끝까지 따봉
+  const u = 1 - p.cheer;
+  let jump = 0;
+  let sy = 1;
+  if (p.cheer > 0 && !p.still) {
+    if (u < 0.12) sy = 1 - 0.18 * Math.sin((u / 0.12) * Math.PI * 0.5);
+    else if (u < 0.5) {
+      const k = (u - 0.12) / 0.38;
+      jump = Math.sin(k * Math.PI) * 16;
+      sy = 1 + 0.12 * Math.cos(k * Math.PI);
+    } else if (u < 0.62) sy = 1 - 0.14 * Math.sin(((u - 0.5) / 0.12) * Math.PI);
+  }
+  /** 따봉 드는 동안에는 오른 앞발이 뱃전에서 떨어져 있다 */
+  const raised = p.cheer > 0 && u > 0.1;
   ctx.save();
-  ctx.translate(shake, -hop);
+  ctx.translate(shake, -hop - jump);
+  // 발밑(-10, -6)을 기준으로 늘이고 찌그러뜨린다 — 부피는 그대로
+  ctx.translate(-10, -6);
+  ctx.scale(1 / Math.sqrt(sy), sy);
+  ctx.translate(10, 6);
   ctx.lineCap = 'round';
 
   // 실루엣을 빛 쪽으로 살짝 밀어 림 라이트로 한 번, 제자리에 털색으로 한 번
   ctx.save();
   ctx.translate(p.rimSide * 0.9, -0.9);
-  silhouette(ctx, p.rim, p.rim, wag, look);
+  silhouette(ctx, p.rim, p.rim, wag, look, raised);
   ctx.restore();
-  silhouette(ctx, skin.fur, skin.light, wag, look);
+  silhouette(ctx, skin.fur, skin.light, wag, look, raised);
 
   // 얼룩·입 둘레 무늬는 머리 밖으로 삐져나오지 않게 머리 모양으로 잘라 그린다
   if (skin.patch || skin.muzzle) {
@@ -103,14 +124,52 @@ export function drawCat(ctx: CanvasRenderingContext2D, skin: CatSkin, p: CatPose
       ctx.fill();
     }
   }
-  // ω 입
-  ctx.strokeStyle = skin.mouth;
-  ctx.lineWidth = 0.9;
-  ctx.beginPath();
-  ctx.moveTo(fx - 2.2, -19);
-  ctx.quadraticCurveTo(fx - 1.1, -17.5, fx, -19.2);
-  ctx.quadraticCurveTo(fx + 1.1, -17.5, fx + 2.2, -19);
-  ctx.stroke();
+  if (p.cheer > 0 && u < 0.7) {
+    // 야옹 — 동그랗게 벌린 입
+    ctx.fillStyle = skin.mouth;
+    ctx.beginPath();
+    ctx.ellipse(fx, -17.6, 2.2, 2.4 * Math.min(1, u / 0.1), 0, 0, TAU);
+    ctx.fill();
+  } else {
+    // ω 입
+    ctx.strokeStyle = skin.mouth;
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(fx - 2.2, -19);
+    ctx.quadraticCurveTo(fx - 1.1, -17.5, fx, -19.2);
+    ctx.quadraticCurveTo(fx + 1.1, -17.5, fx + 2.2, -19);
+    ctx.stroke();
+  }
+  // 따봉 — 오른 앞발을 머리 옆으로 번쩍 들고 엄지를 세운다. 끝날 즈음 다시 내린다
+  if (raised) {
+    const lift = Math.min(1, (u - 0.1) / 0.15) * Math.min(1, p.cheer / 0.15);
+    const px = -4.5 + look * 0.3 + lift * 14;
+    const py = -11 - lift * 19;
+    ctx.fillStyle = skin.fur;
+    ctx.strokeStyle = skin.fur;
+    ctx.lineWidth = 4.2;
+    ctx.beginPath();
+    ctx.moveTo(-2 + look * 0.3, -13);
+    ctx.lineTo(px, py + 3);
+    ctx.stroke();
+    // 주먹은 세로로 세우고 엄지는 머리 쪽 가장자리에서 위로 — 가운데서 솟으면 다른 손가락처럼 보인다
+    ctx.fillStyle = skin.light;
+    ctx.beginPath();
+    ctx.roundRect(px - 3, py - 2.5, 6.5, 7.5, 2.6);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(px - 2.2, py - 2.5 - 2.6 * lift, 1.6, 2.9 * lift + 0.01, -0.25, 0, TAU);
+    ctx.fill();
+    // 말아 쥔 손가락 마디
+    ctx.strokeStyle = 'rgba(0,0,0,.22)';
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    for (const dy of [0.2, 2.4]) {
+      ctx.moveTo(px + 0.6, py + dy);
+      ctx.lineTo(px + 3.3, py + dy);
+    }
+    ctx.stroke();
+  }
   // 땀방울
   if (startled > 0) {
     ctx.fillStyle = `rgba(170,215,255,${Math.min(1, startled * 2)})`;
@@ -138,7 +197,7 @@ function headPath(ctx: CanvasRenderingContext2D) {
 }
 
 /** 꼬리·몸·귀·머리·앞발 */
-function silhouette(ctx: CanvasRenderingContext2D, fur: string, paw: string, wag: number, look: number) {
+function silhouette(ctx: CanvasRenderingContext2D, fur: string, paw: string, wag: number, look: number, raised: boolean) {
   ctx.strokeStyle = fur;
   ctx.lineWidth = 4.4;
   ctx.beginPath();
@@ -166,6 +225,6 @@ function silhouette(ctx: CanvasRenderingContext2D, fur: string, paw: string, wag
   ctx.fillStyle = paw;
   ctx.beginPath();
   ctx.ellipse(-15.5 + look * 0.3, -11, 3.6, 2.6, 0, 0, TAU);
-  ctx.ellipse(-4.5 + look * 0.3, -11, 3.6, 2.6, 0, 0, TAU);
+  if (!raised) ctx.ellipse(-4.5 + look * 0.3, -11, 3.6, 2.6, 0, 0, TAU);
   ctx.fill();
 }
